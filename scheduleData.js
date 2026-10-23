@@ -1,5 +1,4 @@
 // Расписание группы 113-к (17 недель семестра)
-// Календарь недель семестра:
 const semesterWeeks = [
   { id: 1, parity: "odd", range: "31 августа - 5 сентября", days: [
     { name: "пн", date: "31 августа" }, { name: "вт", date: "1 сентября" }, { name: "ср", date: "2 сентября" },
@@ -79,13 +78,16 @@ const timeSlots = [
   { num: 5, start: "14:50", end: "16:15" }
 ];
 
-// Функция генерации точного расписания на конкретную неделю из PDF:
 function getScheduleForWeek(weekNum) {
   const w = weekNum;
   const res = { "пн": [], "вт": [], "ср": [], "чт": [], "пт": [], "сб": [] };
 
   // --- ПОНЕДЕЛЬНИК ---
-  if (w >= 2) res["пн"].push({ time: 1, name: "Физкультура", type: "sport", room: "СКЦ (Рабкоровская 17/2)", teacher: "Брановицкая А.А.", note: "Спортивный зал №1" });
+  // Физкультура продлена до 21 ноября (до 12 недели включительно) на оба вида недели
+  if (w <= 12) {
+    res["пн"].push({ time: 1, name: "Физкультура", type: "sport", room: "СКЦ (Рабкоровская 17/2)", teacher: "Брановицкая А.А.", note: "Спортивный зал №1" });
+  }
+
   if (w >= 2 && w <= 4) res["пн"].push({ time: 2, name: "Введение в спец. и информ. культура", type: "practice", room: "3-553", teacher: "Кривошеева С.В." });
   if (w >= 5 && w <= 15) res["пн"].push({ time: 2, name: "Основы информ. технологий", type: "lab", room: "Лаб.", teacher: "Шатько С.А." });
   if (w <= 4) res["пн"].push({ time: 3, name: "Введение в спец. и информ. культура", type: "practice", room: "3-553", teacher: "Кривошеева С.В." });
@@ -95,7 +97,7 @@ function getScheduleForWeek(weekNum) {
   if (w >= 6) res["пн"].push({ time: 5, name: "Информационный и кураторские часы", type: "practice", room: "3-553", teacher: "Куратор" });
 
   // --- ВТОРНИК ---
-  // (Исправлено: Никакого БЖД на 1-4 неделях! На 1-4 неделях - Основы ИТ)
+  // (БЖД ПОЛНОСТЬЮ УДАЛЕНО)
   if (w === 3 || w === 4 || w === 6 || w === 8) {
     res["вт"].push({ time: 2, name: "Перспектива", type: "lecture", room: "3-553", teacher: "Федорец Я.В." });
   } else if (w === 5) {
@@ -108,10 +110,6 @@ function getScheduleForWeek(weekNum) {
 
   if (w >= 1 && w <= 4) {
     res["вт"].push({ time: 3, name: "Основы информ. технологий", type: "lab", room: "ауд. 611", teacher: "Серёгина Л.А." });
-  } else if (w >= 5 && w <= 10) {
-    res["вт"].push({ time: 3, name: "Безопасность жизнедеятельности человека (БЖД)", type: "practice", room: "3-553", teacher: "Тришин Л.С.", note: "Семинар" });
-  } else if (w >= 11 && w <= 15) {
-    res["вт"].push({ time: 3, name: "Безопасность жизнедеятельности человека (БЖД)", type: "practice", room: "3-553", teacher: "Тришин Л.С.", note: "Практика" });
   }
 
   if (w === 1) res["вт"].push({ time: 4, name: "Физическая культура", type: "sport", room: "СКЦ", teacher: "Абрамович П.А." });
@@ -130,7 +128,11 @@ function getScheduleForWeek(weekNum) {
   }
 
   // --- ЧЕТВЕРГ ---
-  if (w <= 5) res["чт"].push({ time: 1, name: "Физкультура", type: "sport", room: "СКЦ (Рабкоровская 17/2)", teacher: "Брановицкая А.А.", note: "Силовой зал №3" });
+  // Физкультура продлена до 21 ноября (до 12 недели включительно) на оба вида недели
+  if (w <= 12) {
+    res["чт"].push({ time: 1, name: "Физкультура", type: "sport", room: "СКЦ (Рабкоровская 17/2)", teacher: "Брановицкая А.А.", note: "Силовой зал №3" });
+  }
+
   if (w === 2 || w === 3) res["чт"].push({ time: 2, name: "Материаловедение и технологии", type: "practice", room: "3-557", teacher: "Аждер Н.А." });
   if (w <= 3) res["чт"].push({ time: 3, name: "Материаловедение и технологии", type: "lecture", room: "3-557", teacher: "Аждер Н.А." });
   if (w >= 4 && w <= 15) res["чт"].push({ time: 3, name: "Цветоведение", type: "practice", room: "3-555", teacher: "Хадкевич А.А." });
