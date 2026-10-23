@@ -1,32 +1,21 @@
 document.addEventListener("DOMContentLoaded", () => {
-  let currentParity = "odd"; // "odd" (над чертой) или "even" (под чертой)
+  // По умолчанию открываем 8 неделю (19-24 октября, как в скриншоте пользователя) или текущую
+  let currentWeekIndex = 7; // Индекс 7 = 8 неделя
+  let selectedMobileDayIndex = 0; // Понедельник
 
-  const btnOdd = document.getElementById("btnOdd");
-  const btnEven = document.getElementById("btnEven");
-  const prevWeek = document.getElementById("prevWeek");
-  const nextWeek = document.getElementById("nextWeek");
-  const weekStatusTitle = document.getElementById("weekStatusTitle");
-  const weekSub = document.getElementById("weekSub");
-  
+  const weekDatesElem = document.getElementById("weekDates");
+  const weekParityElem = document.getElementById("weekParity");
   const tableHeaderRow = document.getElementById("tableHeaderRow");
   const tableBody = document.getElementById("tableBody");
-  const mobileSchedule = document.getElementById("mobileSchedule");
+  
+  const prevWeekBtn = document.getElementById("prevWeek");
+  const nextWeekBtn = document.getElementById("nextWeek");
+  const btnCurrentWeek = document.getElementById("btnCurrentWeek");
 
-  function setParity(parity) {
-    currentParity = parity;
-    if (parity === "odd") {
-      btnOdd.classList.add("active");
-      btnEven.classList.remove("active");
-      weekStatusTitle.textContent = "Над чертой";
-      weekSub.textContent = "1-я неделя (нечетная)";
-    } else {
-      btnEven.classList.add("active");
-      btnOdd.classList.remove("active");
-      weekStatusTitle.textContent = "Под чертой";
-      weekSub.textContent = "2-я неделя (четная)";
-    }
-    renderSchedule();
-  }
+  const mobileWeekSummary = document.getElementById("mobileWeekSummary");
+  const mobileDayTabs = document.getElementById("mobileDayTabs");
+  const mobileSelectedDayName = document.getElementById("mobileSelectedDayName");
+  const mobileLessonsList = document.getElementById("mobileLessonsList");
 
   function getBadgeLabel(type) {
     switch (type) {
@@ -38,22 +27,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function renderSchedule() {
-    const data = scheduleData[currentParity];
-
-    // 1. Рендер десктопной таблицы
-    tableHeaderRow.innerHTML = `<th class="time-col-header">Время</th>`;
-    scheduleData.days.forEach(day => {
+  function renderDesktopTable(weekData, scheduleForWeek) {
+    // 1. Шапка таблицы с точными датами
+    tableHeaderRow.innerHTML = `<th class="time-col-header"></th>`;
+    weekData.days.forEach(day => {
       const th = document.createElement("th");
-      th.textContent = day;
+      th.innerHTML = `
+        <div class="day-header-box">
+          <span class="day-header-name">${day.name}</span>
+          <span class="day-header-date">${day.date}</span>
+        </div>
+      `;
       tableHeaderRow.appendChild(th);
     });
 
+    // 2. Строки времени
     tableBody.innerHTML = "";
-    scheduleData.times.forEach(slot => {
+    timeSlots.forEach(slot => {
       const tr = document.createElement("tr");
 
-      // Колонка времени
+      // Ячейка времени (как в ГГТУ)
       const tdTime = document.createElement("td");
       tdTime.className = "time-cell";
       tdTime.innerHTML = `
@@ -63,75 +56,128 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
       tr.appendChild(tdTime);
 
-      // Ячейки по дням
-      scheduleData.days.forEach(day => {
+      // Ячейки по каждому дню
+      weekData.days.forEach(day => {
         const td = document.createElement("td");
-        const lessons = data[day] ? data[day].filter(l => l.time === slot.num) : [];
+        const dayLessons = scheduleForWeek[day.name] || [];
+        const lesson = dayLessons.find(l => l.time === slot.num);
 
-        if (lessons.length > 0) {
-          lessons.forEach(l => {
-            td.innerHTML += `
-              <div class="lesson-card card-${l.type}">
-                <div class="lesson-top">
-                  <span class="lesson-name">${l.name}</span>
-                  <span class="type-pill ${l.type}">${getBadgeLabel(l.type)}</span>
-                </div>
-                <div class="lesson-room">${l.room}</div>
-                ${l.teacher ? `<div class="lesson-teacher">${l.teacher}</div>` : ''}
-                ${l.note ? `<div class="lesson-note">${l.note}</div>` : ''}
+        if (lesson) {
+          td.innerHTML = `
+            <div class="lesson-card card-${lesson.type}">
+              <div class="lesson-top">
+                <span class="lesson-name">${lesson.name}</span>
+                <span class="badge-pill ${lesson.type}">${getBadgeLabel(lesson.type)}</span>
               </div>
-            `;
-          });
+              <div class="lesson-room">${lesson.room}</div>
+              ${lesson.teacher ? `<div class="lesson-teacher">${lesson.teacher}</div>` : ''}
+              ${lesson.note ? `<div class="lesson-note">${lesson.note}</div>` : ''}
+            </div>
+          `;
         }
         tr.appendChild(td);
       });
+
       tableBody.appendChild(tr);
-    });
-
-    // 2. Рендер мобильного вида
-    mobileSchedule.innerHTML = "";
-    scheduleData.days.forEach(day => {
-      const dayLessons = data[day] || [];
-      if (dayLessons.length === 0) return;
-
-      const dayCard = document.createElement("div");
-      dayCard.className = "mobile-day-card";
-      
-      let lessonsHtml = "";
-      dayLessons.sort((a, b) => a.time - b.time).forEach(l => {
-        const timeSlot = scheduleData.times.find(t => t.num === l.time);
-        lessonsHtml += `
-          <div class="mobile-lesson-item">
-            <div class="time-num" style="font-size:0.75rem; margin-bottom: 4px;">
-              ${timeSlot ? timeSlot.start + ' - ' + timeSlot.end : 'Пара ' + l.time}
-            </div>
-            <div class="lesson-card card-${l.type}">
-              <div class="lesson-top">
-                <span class="lesson-name">${l.name}</span>
-                <span class="type-pill ${l.type}">${getBadgeLabel(l.type)}</span>
-              </div>
-              <div class="lesson-room">${l.room}</div>
-              ${l.teacher ? `<div class="lesson-teacher">${l.teacher}</div>` : ''}
-              ${l.note ? `<div class="lesson-note">${l.note}</div>` : ''}
-            </div>
-          </div>
-        `;
-      });
-
-      dayCard.innerHTML = `
-        <div class="mobile-day-header">${day}</div>
-        ${lessonsHtml}
-      `;
-      mobileSchedule.appendChild(dayCard);
     });
   }
 
-  // Переключатели
-  btnOdd.addEventListener("click", () => setParity("odd"));
-  btnEven.addEventListener("click", () => setParity("even"));
-  prevWeek.addEventListener("click", () => setParity(currentParity === "odd" ? "even" : "odd"));
-  nextWeek.addEventListener("click", () => setParity(currentParity === "odd" ? "even" : "odd"));
+  function renderMobileView(weekData, scheduleForWeek) {
+    const parityText = weekData.parity === "odd" ? "над чертой" : "под чертой";
+    mobileWeekSummary.textContent = `${weekData.range} • ${weekData.id} неделя (${parityText})`;
 
-  // Начальная отрисовка
-  setParity("odd");
+    // Табы дней (пн, вт, ср, чт, пт, сб с номерами чисел)
+    mobileDayTabs.innerHTML = "";
+    weekData.days.forEach((day, index) => {
+      const btn = document.createElement("button");
+      btn.className = `mobile-tab-btn ${index === selectedMobileDayIndex ? 'active' : ''}`;
+      // Извлекаем только число из "19 октября"
+      const dayNumber = day.date.split(" ")[0];
+      btn.innerHTML = `
+        <span class="tab-day-name">${day.name}</span>
+        <span class="tab-day-date">${dayNumber}</span>
+      `;
+      btn.addEventListener("click", () => {
+        selectedMobileDayIndex = index;
+        renderMobileView(weekData, scheduleForWeek);
+      });
+      mobileDayTabs.appendChild(btn);
+    });
+
+    // Название выбранного дня в плашке
+    const currentDay = weekData.days[selectedMobileDayIndex];
+    const fullDayNames = { "пн": "Понедельник", "вт": "Вторник", "ср": "Среда", "чт": "Четверг", "пт": "Пятница", "сб": "Суббота" };
+    mobileSelectedDayName.textContent = `${fullDayNames[currentDay.name]}, ${currentDay.date}`;
+
+    // Список занятий выбранного дня (по слотам 1-5 с прочерками если пусто)
+    mobileLessonsList.innerHTML = "";
+    const dayLessons = scheduleForWeek[currentDay.name] || [];
+
+    timeSlots.forEach(slot => {
+      const lesson = dayLessons.find(l => l.time === slot.num);
+      if (lesson) {
+        const item = document.createElement("div");
+        item.style.display = "flex";
+        item.style.gap = "8px";
+        item.innerHTML = `
+          <div class="time-cell" style="width: 50px; flex-shrink: 0;">
+            <div class="time-num">${slot.num}</div>
+            <div style="font-size: 0.7rem;">${slot.start}</div>
+            <div style="font-size: 0.7rem;">${slot.end}</div>
+          </div>
+          <div class="lesson-card card-${lesson.type}" style="flex: 1;">
+            <div class="lesson-top">
+              <span class="lesson-name">${lesson.name}</span>
+              <span class="badge-pill ${lesson.type}">${getBadgeLabel(lesson.type)}</span>
+            </div>
+            <div class="lesson-room">${lesson.room}</div>
+            ${lesson.teacher ? `<div class="lesson-teacher">${lesson.teacher}</div>` : ''}
+            ${lesson.note ? `<div class="lesson-note">${lesson.note}</div>` : ''}
+          </div>
+        `;
+        mobileLessonsList.appendChild(item);
+      } else {
+        const emptyItem = document.createElement("div");
+        emptyItem.className = "mobile-empty-slot";
+        emptyItem.innerHTML = `
+          <div class="mobile-empty-num">${slot.num}<br><span style="font-size:0.7rem; font-weight: normal;">${slot.start}</span></div>
+          <div class="mobile-empty-dash">—</div>
+        `;
+        mobileLessonsList.appendChild(emptyItem);
+      }
+    });
+  }
+
+  function update() {
+    const weekData = semesterWeeks[currentWeekIndex];
+    const scheduleForWeek = getScheduleForWeek(weekData.id);
+
+    weekDatesElem.textContent = weekData.range;
+    weekParityElem.textContent = weekData.parity === "odd" ? "(над чертой)" : "(под чертой)";
+
+    renderDesktopTable(weekData, scheduleForWeek);
+    renderMobileView(weekData, scheduleForWeek);
+  }
+
+  prevWeekBtn.addEventListener("click", () => {
+    if (currentWeekIndex > 0) {
+      currentWeekIndex--;
+      update();
+    }
+  });
+
+  nextWeekBtn.addEventListener("click", () => {
+    if (currentWeekIndex < semesterWeeks.length - 1) {
+      currentWeekIndex++;
+      update();
+    }
+  });
+
+  btnCurrentWeek.addEventListener("click", () => {
+    currentWeekIndex = 7; // Возвращает на текущую 8-ю неделю
+    update();
+  });
+
+  // Запуск
+  update();
 });
